@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en" class="bg-gray-100 min-h-screen">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>1-Week Daily Schedule Tracker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="manifest" href="manifest.json">
+</head>
+<body class="flex flex-col items-center p-4 font-sans">
+
+  <h1 class="text-3xl font-bold mb-4 text-gray-800">🕒 1-Week Daily Schedule</h1>
+
+  <!-- Tabs for 7 days -->
+  <div class="w-full max-w-3xl mb-4">
+    <div class="flex space-x-1 bg-gray-200 rounded">
+      <button class="day-tab px-4 py-2 rounded" data-day="Monday">Mon</button>
+      <button class="day-tab px-4 py-2 rounded" data-day="Tuesday">Tue</button>
+      <button class="day-tab px-4 py-2 rounded" data-day="Wednesday">Wed</button>
+      <button class="day-tab px-4 py-2 rounded" data-day="Thursday">Thu</button>
+      <button class="day-tab px-4 py-2 rounded" data-day="Friday">Fri</button>
+      <button class="day-tab px-4 py-2 rounded" data-day="Saturday">Sat</button>
+      <button class="day-tab px-4 py-2 rounded" data-day="Sunday">Sun</button>
+    </div>
+  </div>
+
+  <div id="scheduleContainer" class="w-full max-w-3xl space-y-4"></div>
+
+  <script>
+    const scheduleData = {
+      "Blood Sugar Log": [
+        {time:"Before UMAGA", task:"Enter fasting blood sugar (mg/dL)"}
+      ],
+      "UMAGA": [
+        {time:"6:00 AM", task:"Gumising - Uminom ng 1 basong tubig. Huwag muna kumain."},
+        {time:"6:30 AM", task:"💊 Gliclazide MR 60 mg - Inumin 30 min bago almusal."},
+        {time:"7:00 AM", task:"Almusal - Ulam: itlog/isda/manok (konti), Gulay: pechay/repolyo/ampalaya, Kanin: ½ cup, ❌ Walang matamis/juice/softdrinks."},
+        {time:"7:30 AM", task:"💊 Ciprofloxacin 500 mg - Inumin AFTER breakfast."}
+      ],
+      "TANGHALI": [
+        {time:"10:00 AM", task:"Optional Snack - Mani o nilagang itlog. Tubig lang."},
+        {time:"12:00 NN", task:"Tanghalian - Ulam: isda/manok, maraming gulay. Kanin: ½ cup max, ❌ Walang matatamis/prito."}
+      ],
+      "HAPON": [
+        {time:"3:00 PM", task:"Optional Snack - Pipino, mansanas (½), o crackers na walang sugar. Tubig."}
+      ],
+      "GABI": [
+        {time:"6:00 PM", task:"Hapunan - Ulam: isda/manok/tofu. Gulay: steamed o sabaw. Kanin: ¼–½ cup lang kung kaya."},
+        {time:"6:30 PM", task:"💊 Vildagliptin 50 mg - Inumin AFTER supper."},
+        {time:"7:00 PM", task:"💊 Ciprofloxacin 500 mg - Inumin AFTER supper."}
+      ],
+      "BAGO MATULOG": [
+        {time:"9:00 PM", task:"Tubig at light stretching. Iwas matamis at kape."},
+        {time:"10:00 PM", task:"Tulog (importante sa sugar control at healing)."}
+      ]
+    };
+
+    const medTimes = ["6:30 AM","7:30 AM","6:30 PM","7:00 PM"];
+    const days = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+    let currentDay = "Monday";
+    const scheduleContainer = document.getElementById("scheduleContainer");
+
+    function saveState(day, section, index, checked, value){
+      const key = `schedule_${day}`;
+      let dayData = JSON.parse(localStorage.getItem(key)) || {};
+      if(!dayData[section]) dayData[section] = [];
+      dayData[section][index] = {checked,value};
+      localStorage.setItem(key, JSON.stringify(dayData));
+      updateTabColor(day);
+    }
+
+    function updateTabColor(day){
+      const key = `schedule_${day}`;
+      const dayData = JSON.parse(localStorage.getItem(key)) || {};
+      let allDone = true;
+      for(let section in scheduleData){
+        const tasks = scheduleData[section];
+        for(let i=0;i<tasks.length;i++){
+          if(!dayData[section] || !dayData[section][i] || !dayData[section][i].checked){
+            allDone = false;
+          }
+        }
+      }
+      document.querySelectorAll(".day-tab").forEach(btn=>{
+        if(btn.getAttribute("data-day")===day){
+          if(allDone){
+            btn.classList.add("bg-green-400","text-white");
+          } else{
+            btn.classList.remove("bg-green-400","text-white");
+          }
+        }
+      });
+    }
+
+    function loadSchedule(day){
+      scheduleContainer.innerHTML="";
+      for(let section in scheduleData){
+        const card = document.createElement("div");
+        card.className = "bg-white p-4 rounded-lg shadow";
+
+        const h2 = document.createElement("h2");
+        h2.className = "text-lg font-semibold mb-2";
+        h2.textContent = section;
+        card.appendChild(h2);
+
+        const ul = document.createElement("ul");
+        ul.className = "space-y-2";
+
+        scheduleData[section].forEach((item,index)=>{
+          const li = document.createElement("li");
+          li.className = "flex items-center justify-between bg-gray-50 p-2 rounded";
+
+          const divTask = document.createElement("div");
+          if(section==="Blood Sugar Log"){
+            const input = document.createElement("input");
+            input.type="number";
+            input.min="0";
+            input.placeholder="mg/dL";
+            input.className="border p-1 rounded w-20";
+            const key = `schedule_${day}`;
+            const dayData = JSON.parse(localStorage.getItem(key)) || {};
+            if(dayData[section] && dayData[section][index]){
+              input.value = dayData[section][index].value || "";
+            }
+            input.addEventListener("input",(e)=>{
+              saveState(currentDay,section,index,false,e.target.value);
+            });
+            divTask.innerHTML = `<span class="font-medium">${item.time} - </span>${item.task} `;
+            divTask.appendChild(input);
+          } else{
+            divTask.innerHTML = `<span class="font-medium">${item.time} - </span>${item.task}`;
+          }
+
+          const divCheckbox = document.createElement("div");
+          divCheckbox.className = "flex flex-col items-end";
+
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.className = "task-checkbox mb-1";
+
+          const timeSpan = document.createElement("span");
+          timeSpan.className = "text-xs text-gray-500 time-done";
+
+          const key = `schedule_${day}`;
+          const dayData = JSON.parse(localStorage.getItem(key)) || {};
+          if(dayData[section] && dayData[section][index]){
+            checkbox.checked = dayData[section][index].checked || false;
+            timeSpan.textContent = dayData[section][index].value || "";
+          }
+
+          checkbox.addEventListener("change",(e)=>{
+            const now = new Date();
+            const hours = now.getHours().toString().padStart(2,'0');
+            const minutes = now.getMinutes().toString().padStart(2,'0');
+            if(e.target.checked){
+              timeSpan.textContent = `✔ ${hours}:${minutes}`;
+              saveState(currentDay, section, index, true, `✔ ${hours}:${minutes}`);
+              if("vibrate" in navigator){ navigator.vibrate(300); }
+            } else{
+              timeSpan.textContent = "";
+              saveState(currentDay, section, index, false, "");
+            }
+          });
+
+          if(section!=="Blood Sugar Log"){
+            divCheckbox.appendChild(checkbox);
+            divCheckbox.appendChild(timeSpan);
+          }
+
+          li.appendChild(divTask);
+          li.appendChild(divCheckbox);
+          ul.appendChild(li);
+        });
+
+        card.appendChild(ul);
+        scheduleContainer.appendChild(card);
+      }
+      updateTabColor(day);
+    }
+
+    document.querySelectorAll(".day-tab").forEach(btn=>{
+      btn.addEventListener("click",()=>{
+        currentDay = btn.getAttribute("data-day");
+        document.querySelectorAll(".day-tab").forEach(b=>b.classList.remove("bg-white","shadow"));
+        btn.classList.add("bg-white","shadow");
+        loadSchedule(currentDay);
+      });
+    });
+
+    document.querySelector(`.day-tab[data-day="${currentDay}"]`).classList.add("bg-white","shadow");
+    loadSchedule(currentDay);
+
+    setInterval(()=>{
+      const now = new Date();
+      const hours = now.getHours();
+      const minutes = now.getMinutes();
+      medTimes.forEach(time=>{
+        const [h,m] = time.split(/[: ]/);
+        let hr=parseInt(h);
+        if(time.includes("PM") && hr<12) hr+=12;
+        if(time.includes("AM") && hr===12) hr=0;
+        if(hr===hours && parseInt(m)===minutes){
+          if("Notification" in window){
+            Notification.requestPermission().then(permission=>{
+              if(permission==="granted"){
+                new Notification("Medication Reminder",{
+                  body:`Time to take your meds (${time})`
+                });
+              }
+            });
+          }
+          if("vibrate" in navigator){ navigator.vibrate([500,200,500]); }
+        }
+      });
+    },60000);
+  </script>
+
+  <script>
+    // Register Service Worker for PWA
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.register('sw.js')
+      .then(()=>console.log('Service Worker registered'))
+      .catch(console.error);
+    }
+  </script>
+
+</body>
+</html>
